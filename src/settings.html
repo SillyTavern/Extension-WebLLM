@@ -1,0 +1,59 @@
+<div id="webllm_settings">
+    <div class="inline-drawer">
+        <div class="inline-drawer-toggle inline-drawer-header">
+            <div class="flex-container alignitemscenter margin0">
+                <b>WebLLM</b>
+            </div>
+            <div class="inline-drawer-icon fa-solid fa-circle-chevron-down down"></div>
+        </div>
+        <div class="inline-drawer-content">
+            <div id="webllm_default_settings">
+                <strong class="webllm-default-settings-header">
+                    Default settings
+                </strong>
+                <div class="flex-container">
+                    <div>
+                        <label>Model</label>
+                        <select class="text_pole" id="webllm_model"></select>
+                    </div>
+                </div>
+                <div class="flex-container">
+                    <div class="flex1">
+                        <label>Temperature</label>
+                        <input class="text_pole" type="number" id="webllm_temperature" min="0" max="2" step="0.01">
+                    </div>
+                    <div class="flex1">
+                        <label>Top P</label>
+                        <input class="text_pole" type="number" id="webllm_top_p" min="0" max="1" step="0.01">
+                    </div>
+                </div>
+                <div class="flex-container">
+                    <div class="flex1">
+                        <label>Presence Penalty</label>
+                        <input class="text_pole" type="number" id="webllm_presence_penalty" min="-2" max="2" step="0.01">
+                    </div>
+                    <div class="flex1">
+                        <label>Frequency Penalty</label>
+                        <input class="text_pole" type="number" id="webllm_frequency_penalty" min="-2" max="2" step="0.01">
+                    </div>
+                </div>
+                <div class="flex-container">
+                    <div class="flex1">
+                        <label>Max Tokens</label>
+                        <input class="text_pole" type="number" id="webllm_max_tokens" min="1" max="4096" step="1">
+                    </div>
+                    <div class="flex1">
+                        <label>Seed</label>
+                        <input class="text_pole" type="number" id="webllm_seed" min="0" max="2147483647" step="1">
+                    </div>
+                </div>
+            </div>
+            <div class="flex-container justifyCenter alignItemsCenter">
+                <button id="webllm_demo" class="menu_button menu_button_icon">
+                    <i class="fa-solid fa-hat-wizard"></i>
+                    <span>Try it out!</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>

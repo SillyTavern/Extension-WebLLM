@@ -1,0 +1,24 @@
+<div class="flex-container flexFlowColumn height100p">
+    <div class="flex1 flex-container flexFlowColumn">
+        <label>System Prompt</label>
+        <textarea class="text_pole flex1" id="webllm_demo_system_prompt" placeholder="Type instructions here..."></textarea>
+    </div>
+    <div class="flex1 flex-container flexFlowColumn">
+        <label>User Message</label>
+        <textarea class="text_pole flex1" id="webllm_demo_user_message" placeholder="Type user input here..."></textarea>
+    </div>
+    <div class="flex1 flex-container flexFlowColumn">
+        <label>Model Reply</label>
+        <textarea readonly class="text_pole flex1" id="webllm_demo_model_reply" placeholder="Generated text will appear here."></textarea>
+    </div>
+    <div class="flex-container alignItemsCenter justifyCenter">
+        <button id="webllm_demo_generate" class="menu_button menu_button_icon">
+            <i class="fa-solid fa-paper-plane"></i>
+            <span>Generate</span>
+        </button>
+        <button id="webllm_demo_stream" class="menu_button menu_button_icon">
+            <i class="fa-solid fa-wind"></i>
+            <span>Stream</span>
+        </button>
+    </div>
+</div>
