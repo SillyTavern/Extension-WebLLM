@@ -75,11 +75,26 @@ class WebLLMEngineWrapper extends EventTarget {
      * @type {AsyncLock}
      */
     #lock = new AsyncLock();
+    /**
+     * Toast element for progress messages.
+     * @type {JQuery}
+     */
+    #toast = $();
 
     constructor(modelId = null, silent = false) {
         super();
         this.#currentModelId = modelId;
         this.#silent = silent;
+
+        if (!silent) {
+            this.#toast = toastr.info('Please wait...', 'WebLLM', {
+                timeOut: 0,
+                extendedTimeOut: 0,
+                closeButton: true,
+                tapToDismiss: false,
+                progressBar: false,
+            }).hide();
+        }
     }
 
     /**
@@ -105,28 +120,17 @@ class WebLLMEngineWrapper extends EventTarget {
             };
         }
 
-        const toast = toastr.info('Initializing model...', 'WebLLM', {
-            timeOut: 0,
-            extendedTimeOut: 0,
-            closeButton: true,
-            tapToDismiss: false,
-            progressBar: false,
-            escapeHtml: false,
-            preventDuplicates: false,
-        });
-        toast.hide();
-        const message = toast.find('.toast-message');
         return (progress) => {
             if (!isNaN(progress?.progress)) {
                 console.debug(progress);
-                toast.show();
+            }
+            if (progress?.text) {
+                this.#toast.show();
+                this.#toast.find('.toast-message').text(progress.text);
             }
             const value = Math.floor(progress?.progress * 100);
             if (isNaN(value)) {
-                return toastr.clear(toast);
-            }
-            if (progress.text) {
-                message.text(progress.text);
+                return this.#toast.hide();
             }
         };
     }
@@ -159,10 +163,10 @@ class WebLLMEngineWrapper extends EventTarget {
 
     /**
      * Initialize the engine with the given model.
-     * @param {string} modelId Model ID
+     * @param {string} [modelId] Model ID
      * @returns {Promise<void>}
      */
-    async #initEngine(modelId) {
+    async #initEngine(modelId = null) {
         const updateProgress = this.#getProgressBar();
 
         try {
@@ -252,13 +256,12 @@ class WebLLMEngineWrapper extends EventTarget {
 
     /**
      * Generates text based on the given prompt using the specified model.
-     * @param {string} modelId Model ID
      * @param {webllm.ChatCompletionMessageParam[]} messages Array of messages
      * @param {CompletionParam} [params] Additional parameters for completion
      * @returns {Promise<string>} Promise that resolves to the generated text
      */
-    async generateChatPrompt(modelId, messages, params) {
-        await this.#initEngine(modelId);
+    async generateChatPrompt(messages, params = null) {
+        await this.#initEngine();
         /** @type {webllm.ChatCompletionRequestNonStreaming} */
         const request = {
             ...this.#getParams(params),
@@ -270,13 +273,12 @@ class WebLLMEngineWrapper extends EventTarget {
 
     /**
      * Generates a JSON object based on the given prompt using the specified model.
-     * @param {string} modelId Model ID
      * @param {webllm.ChatCompletionMessageParam[]} messages Array of messages
      * @param {CompletionParam} [params] Additional parameters for completion
      * @returns {Promise<Object>} Promise that resolves to the generated JSON object
      */
-    async generateJSON(modelId, messages, params = null) {
-        await this.#initEngine(modelId);
+    async generateJSON(messages, params = null) {
+        await this.#initEngine();
         /** @type {webllm.ChatCompletionRequestNonStreaming} */
         const request = {
             ...this.#getParams(params),
@@ -292,13 +294,12 @@ class WebLLMEngineWrapper extends EventTarget {
     /**
      * Generates a stream based on the given prompt using the specified model.
      * Compatible with StreamingProcessor interface.
-     * @param {string} modelId Model ID
      * @param {webllm.ChatCompletionMessageParam[]} messages Array of messages
      * @param {CompletionParam} [params] Additional parameters for completion
      * @returns {AsyncGenerator<{ text: string, swipes: any[], logprobs: null }>} Async generator that yields the generated
      */
-    async* generateChatStream(modelId, messages, params = null) {
-        await this.#initEngine(modelId);
+    async* generateChatStream(messages, params = null) {
+        await this.#initEngine();
         /** @type {webllm.ChatCompletionRequestStreaming} */
         const request = {
             ...this.#getParams(params),
@@ -479,7 +480,8 @@ class WebLLMSettingsManager {
             ];
 
             const modelId = document.getElementById('webllm_model').value;
-            const completion = await this.#engine.generateChatPrompt(modelId, messages);
+            await this.#engine.loadModel(modelId);
+            const completion = await this.#engine.generateChatPrompt(messages);
 
             modelReply.value = completion;
         });
@@ -494,7 +496,8 @@ class WebLLMSettingsManager {
             ];
 
             const modelId = document.getElementById('webllm_model').value;
-            const stream = this.#engine.generateChatStream(modelId, messages);
+            await this.#engine.loadModel(modelId);
+            const stream = this.#engine.generateChatStream(messages);
 
             for await (const { text } of stream) {
                 modelReply.value = text;
