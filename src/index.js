@@ -247,10 +247,10 @@ class WebLLMEngineWrapper extends EventTarget {
 
     /**
      * Load the specified model.
-     * @param {string} modelId Model ID
+     * @param {string} [modelId] Model ID
      * @returns {Promise<void>}
      */
-    async loadModel(modelId) {
+    async loadModel(modelId = null) {
         await this.#initEngine(modelId);
     }
 
