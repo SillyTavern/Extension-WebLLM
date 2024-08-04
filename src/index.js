@@ -153,6 +153,11 @@ class WebLLMEngineWrapper extends EventTarget {
         };
     }
 
+    /**
+     * Try to parse a JSON string. Returns null if parsing fails.
+     * @param {string} json JSON string
+     * @returns {Object} Parsed JSON object or null
+     */
     #tryParse(json) {
         try {
             return JSON.parse(json);
@@ -170,8 +175,6 @@ class WebLLMEngineWrapper extends EventTarget {
         const updateProgress = this.#getProgressBar();
 
         try {
-            await this.#lock.acquireLock();
-
             if (!modelId && this.#currentModelId) {
                 modelId = this.#currentModelId;
             }
@@ -199,8 +202,6 @@ class WebLLMEngineWrapper extends EventTarget {
             console.error(error);
             updateProgress({ progress: NaN });
             throw error;
-        } finally {
-            this.#lock.releaseLock();
         }
     }
 
@@ -225,6 +226,14 @@ class WebLLMEngineWrapper extends EventTarget {
     }
 
     /**
+     * Get the default completion parameters.
+     * @returns {CompletionParam} Default completion parameters
+     */
+    getDefaultParams() {
+        return { ...this.#defaultCompletionParams };
+    }
+
+    /**
      * Gets combined completion parameters.
      * @param {CompletionParam} params Override completion parameters
      * @returns {CompletionParam} Combined completion parameters
@@ -246,12 +255,28 @@ class WebLLMEngineWrapper extends EventTarget {
     }
 
     /**
+     * Set the current model ID without loading the model.
+     * @param {string} modelId Model ID
+     */
+    setCurrentModelId(modelId) {
+        this.#currentModelId = modelId;
+    }
+
+    /**
      * Load the specified model.
      * @param {string} [modelId] Model ID
      * @returns {Promise<void>}
      */
     async loadModel(modelId = null) {
-        await this.#initEngine(modelId);
+        try {
+            await this.#lock.acquireLock();
+            await this.#initEngine(modelId);
+        } catch (error) {
+            console.error(error);
+            if (!this.#silent) toastr.error(`Failed to load model: ${error.message}`, 'WebLLM');
+        } finally {
+            this.#lock.releaseLock();
+        }
     }
 
     /**
@@ -261,14 +286,22 @@ class WebLLMEngineWrapper extends EventTarget {
      * @returns {Promise<string>} Promise that resolves to the generated text
      */
     async generateChatPrompt(messages, params = null) {
-        await this.#initEngine();
-        /** @type {webllm.ChatCompletionRequestNonStreaming} */
-        const request = {
-            ...this.#getParams(params),
-            messages,
-        };
-        const completion = await this.#generateWithRetry(() => this.#engine.chatCompletion(request));
-        return completion?.choices?.[0]?.message?.content ?? '';
+        try {
+            await this.#lock.acquireLock();
+            await this.#initEngine();
+            /** @type {webllm.ChatCompletionRequestNonStreaming} */
+            const request = {
+                ...this.#getParams(params),
+                messages,
+            };
+            const completion = await this.#generateWithRetry(() => this.#engine.chatCompletion(request));
+            return completion?.choices?.[0]?.message?.content ?? '';
+        } catch (error) {
+            console.error(error);
+            if (!this.#silent) toastr.error(`Failed to generate: ${error.message}`, 'WebLLM');
+        } finally {
+            this.#lock.releaseLock();
+        }
     }
 
     /**
@@ -278,17 +311,25 @@ class WebLLMEngineWrapper extends EventTarget {
      * @returns {Promise<Object>} Promise that resolves to the generated JSON object
      */
     async generateJSON(messages, params = null) {
-        await this.#initEngine();
-        /** @type {webllm.ChatCompletionRequestNonStreaming} */
-        const request = {
-            ...this.#getParams(params),
-            messages,
-            response_format: {
-                type: 'json_object',
-            },
-        };
-        const completion = await this.#generateWithRetry(() => this.#engine.chatCompletion(request));
-        return this.#tryParse(completion?.choices?.[0]?.message?.content ?? null);
+        try {
+            await this.#lock.acquireLock();
+            await this.#initEngine();
+            /** @type {webllm.ChatCompletionRequestNonStreaming} */
+            const request = {
+                ...this.#getParams(params),
+                messages,
+                response_format: {
+                    type: 'json_object',
+                },
+            };
+            const completion = await this.#generateWithRetry(() => this.#engine.chatCompletion(request));
+            return this.#tryParse(completion?.choices?.[0]?.message?.content ?? null);
+        } catch (error) {
+            console.error(error);
+            if (!this.#silent) toastr.error(`Failed to generate: ${error.message}`, 'WebLLM');
+        } finally {
+            this.#lock.releaseLock();
+        }
     }
 
     /**
@@ -299,19 +340,27 @@ class WebLLMEngineWrapper extends EventTarget {
      * @returns {AsyncGenerator<{ text: string, swipes: any[], logprobs: null }>} Async generator that yields the generated
      */
     async* generateChatStream(messages, params = null) {
-        await this.#initEngine();
-        /** @type {webllm.ChatCompletionRequestStreaming} */
-        const request = {
-            ...this.#getParams(params),
-            messages,
-            stream: true,
-        };
-        const completion = await this.#generateWithRetry(() => this.#engine.chatCompletion(request));
+        try {
+            await this.#lock.acquireLock();
+            await this.#initEngine();
+            /** @type {webllm.ChatCompletionRequestStreaming} */
+            const request = {
+                ...this.#getParams(params),
+                messages,
+                stream: true,
+            };
+            const completion = await this.#generateWithRetry(() => this.#engine.chatCompletion(request));
 
-        let text = '';
-        for await (const choice of completion) {
-            text += choice?.choices?.[0]?.delta?.content ?? '';
-            yield { text: text, swipes: [], logprobs: null };
+            let text = '';
+            for await (const choice of completion) {
+                text += choice?.choices?.[0]?.delta?.content ?? '';
+                yield { text: text, swipes: [], logprobs: null };
+            }
+        } catch (error) {
+            console.error(error);
+            if (!this.#silent) toastr.error(`Failed to generate: ${error.message}`, 'WebLLM');
+        } finally {
+            this.#lock.releaseLock();
         }
     }
 
@@ -323,27 +372,20 @@ class WebLLMEngineWrapper extends EventTarget {
      * @returns {Promise<T>} The result of the function.
      */
     async #generateWithRetry(func, maxRetries = 1) {
-        try {
-            await this.#lock.acquireLock();
+        let i = 0;
+        while (i++ < maxRetries) {
+            try {
+                return await func();
+            } catch (error) {
+                console.error(error);
 
-            let i = 0;
-            while (i++ < maxRetries) {
-                try {
-                    return await func();
-                } catch (error) {
-                    console.error(error);
-
-                    if (maxRetries <= 0) {
-                        if (!this.#silent) toastr.error(error.message, 'Failed to generate text');
-                        throw error;
-                    }
-
-                    console.warn('Generation failed. Reloading model, retry #', i);
-                    await this.#engine.reload(this.#currentModelId);
+                if (maxRetries <= 0) {
+                    throw error;
                 }
+
+                console.warn('Generation failed. Reloading model, retry #', i);
+                await this.#engine.reload(this.#currentModelId);
             }
-        } finally {
-            this.#lock.releaseLock();
         }
     }
 }
@@ -361,11 +403,12 @@ class WebLLMSettingsManager {
 
     attachEngine(engine) {
         this.#engine = engine;
-        this.pushSettingsToEngine();
-        this.render();
+        this.#trySetDefaultModel();
+        this.#pushSettingsToEngine();
+        this.#render();
     }
 
-    render() {
+    #render() {
         const parent = document.getElementById('extensions_settings');
         const existingSettings = parent.querySelector('#webllm_settings');
 
@@ -408,7 +451,7 @@ class WebLLMSettingsManager {
         seedInput.value = this.readValue('seed');
 
         const demoButton = parent.querySelector('#webllm_demo');
-        demoButton.addEventListener('click', () => this.openDemo());
+        demoButton.addEventListener('click', () => this.#openDemo());
 
         this.#engine.addEventListener('modelReady', () => {
             const currentModel = this.#engine.getCurrentModelInfo();
@@ -442,17 +485,27 @@ class WebLLMSettingsManager {
         const context = SillyTavern.getContext();
         _.set(context.extensionSettings, `${WebLLMSettingsManager.ID}.${key}`, value);
         context.saveSettingsDebounced();
-        this.pushSettingsToEngine();
+        this.#pushSettingsToEngine();
     }
 
-    pushSettingsToEngine() {
+    #trySetDefaultModel() {
+        const models = this.#engine.getModels();
+        const defaultModel = this.readValue('model');
+        if (models.length > 0 && (!defaultModel || !models.some(model => model.id === defaultModel))) {
+            const modelId = models[0].id;
+            this.writeValue('model', modelId);
+            this.#engine.setCurrentModelId(modelId);
+        }
+    }
+
+    #pushSettingsToEngine() {
         const context = SillyTavern.getContext();
         const settings = structuredClone(context.extensionSettings[WebLLMSettingsManager.ID] || {});
         delete settings.model;
         this.#engine.setDefaultParams(settings);
     }
 
-    openDemo() {
+    #openDemo() {
         const context = SillyTavern.getContext();
         const renderer = document.createElement('template');
         renderer.innerHTML = demo;

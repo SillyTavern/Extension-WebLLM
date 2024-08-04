@@ -115,7 +115,7 @@ const response = await engine.generateChatPrompt(prompt, overrideParams);
 
 ### Generate JSON
 
-`generateJSON` accepts a list of JSON objects and returns a generated JSON object. If a model fails to produce a valid JSON object, it will return null. **You must instruct the model to generate JSON in the prompt!**
+`generateJSON` accepts a list of chat message objects (similar to OpenAI format) and returns a generated JSON object. If a model fails to produce a valid JSON object, it will return null. **You must instruct the model to generate JSON in the prompt!**
 
 Additionally, specify override parameters to use in this request only.
 
@@ -141,11 +141,24 @@ Additionally, specify override parameters to use in this request only.
 const prompt = [
   {role: 'user', content: 'Hello!'}
 ];
-const stream = await engine.generateChatStream(prompt);
+const overrideParams = { /* ... */};
+const stream = await engine.generateChatStream(prompt, overrideParams);
 for await (const { text } of stream) {
   console.log(text);
 }
 ```
+
+## Configuration
+
+Default parameters can be configured in the extension settings, including the preferred model.
+
+These parameters will be used in requests for the default engine instance unless overridden by the calling code.
+
+### Demo mode
+
+To open a demo playground, use the "Try it out!" button in the extension settings.
+
+This will use the default engine instance with the default parameters.
 
 ## How to build
 
