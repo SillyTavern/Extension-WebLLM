@@ -71,6 +71,17 @@ const engine = SillyTavern.llm.getEngine();
 await engine.loadModel(modelId);
 ```
 
+### Count tokens
+
+To count the number of tokens in a string with the loaded model's tokenizer, use the `countTokens` method.
+
+```js
+const text = 'Hello, world!';
+const engine = SillyTavern.llm.getEngine();
+const tokens = await engine.countTokens(text);
+// tokens = 5
+```
+
 ### Set default completion parameters
 
 Set the parameters to be used in all subsequent requests with `setDefaultParams`. If a parameter is not set, the model default will be used.

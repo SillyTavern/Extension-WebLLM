@@ -388,6 +388,25 @@ class WebLLMEngineWrapper extends EventTarget {
             }
         }
     }
+
+    /**
+     * Count the number of tokens in the given text.
+     * @param {string} text Text to count tokens
+     * @returns {Promise<number>} Promise that resolves to the number of tokens
+     */
+    async countTokens(text) {
+        try {
+            await this.#lock.acquireLock();
+            await this.#initEngine();
+            const tokens = Array.from(this.#engine.pipeline.tokenizer.encode(text));
+            return tokens.length;
+        } catch (error) {
+            console.error(error);
+            if (!this.#silent) toastr.error(`Failed to count tokens: ${error.message}`, 'WebLLM');
+        } finally {
+            this.#lock.releaseLock();
+        }
+    }
 }
 
 class WebLLMSettingsManager {
