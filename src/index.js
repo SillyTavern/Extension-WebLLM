@@ -213,6 +213,7 @@ class WebLLMEngineWrapper extends EventTarget {
         return webllm
             .prebuiltAppConfig
             .model_list
+            .filter(x => x.model_type !== 'embedding')
             .map(this.#modelToViewModel)
             .sort((a, b) => a.id.localeCompare(b.id));
     }
