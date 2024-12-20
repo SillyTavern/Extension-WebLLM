@@ -21,7 +21,7 @@
         "webpack-cli": "^5.1.4"
     },
     "dependencies": {
-        "@mlc-ai/web-llm": "^0.2.73",
+        "@mlc-ai/web-llm": "^0.2.77",
         "lodash": "^4.17.21"
     }
 }
