@@ -429,7 +429,7 @@ class WebLLMSettingsManager {
     }
 
     #render() {
-        const parent = document.getElementById('extensions_settings');
+        const parent = document.getElementById('webllm_container') ?? document.getElementById('extensions_settings');
         const existingSettings = parent.querySelector('#webllm_settings');
 
         if (existingSettings) {
