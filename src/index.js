@@ -399,14 +399,19 @@ class WebLLMEngineWrapper extends EventTarget {
         try {
             await this.#lock.acquireLock();
             await this.#initEngine();
-            const tokens = Array.from(this.#engine.pipeline.tokenizer.encode(text));
-            return tokens.length;
+            const tokenizer = this.#engine?.pipeline?.tokenizer;
+            if (tokenizer) {
+                const tokens = Array.from(tokenizer.encode(text));
+                return tokens.length;
+            }
         } catch (error) {
             console.error(error);
             if (!this.#silent) toastr.error(`Failed to count tokens: ${error.message}`, 'WebLLM');
         } finally {
             this.#lock.releaseLock();
         }
+
+        throw new Error('[WebLLM] Model provides no tokenizer');
     }
 }
 

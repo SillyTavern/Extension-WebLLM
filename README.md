@@ -75,6 +75,8 @@ await engine.loadModel(modelId);
 
 To count the number of tokens in a string with the loaded model's tokenizer, use the `countTokens` method.
 
+**Throws an error if the model provides no tokenizer.**
+
 ```js
 const text = 'Hello, world!';
 const engine = SillyTavern.llm.getEngine();
