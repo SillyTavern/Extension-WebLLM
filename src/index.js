@@ -330,7 +330,7 @@ class WebLLMEngineWrapper extends EventTarget {
                 encoding_format: 'float',
             };
             const embedding = await this.#generateWithRetry(() => this.#engine.embedding(request));
-            return embedding?.data?.sort(x => x.index)?.map(x => x.embedding) ?? [];
+            return embedding?.data?.sort((a, b) => a.index - b.index)?.map(x => x.embedding) ?? [];
         } catch (error) {
             console.error(error);
             if (!this.#silent) toastr.error(`Failed to embed: ${error.message}`, 'WebLLM');
